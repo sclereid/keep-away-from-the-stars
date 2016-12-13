@@ -6,6 +6,7 @@ keep-away-from-the-stars
 * * * * * * * * * * * * * * * * * 
 plan:
 -------------------------
+Details
 -(done)finish clock and basic GUI
 -finish charactor calculation
 -finish Mouse/Key listener
