@@ -4,7 +4,7 @@ from random import random
 
 
 WIDTH = 10
-HEIGHT = 20
+HEIGHT = 16
 MAX_TMP = 20
 
 class FailedException(BaseException):
@@ -25,6 +25,7 @@ def tic_orange(self, family):
                 block_down.tmp   = MAX_TMP
 
 tic_functions = [tic_white, tic_orange]
+colors = [(128,128,128), (255,165,0)]
 
 class block:
     WHITE = 0
@@ -47,7 +48,7 @@ class block:
     def tic(self, family):
         self.tic_function(self, family)
                 
-class game:
+class base_game:
     
     def __init__(self):
         self.blocks = [[block() for x in range(1, WIDTH+1)] for y in range(HEIGHT+1)]
