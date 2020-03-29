@@ -6,8 +6,13 @@ keep-away-from-the-stars
 * * * * * * * * * * * * * * * * * 
 ### plan: ###
 + (done)finish clock and basic GUI
-+ finish charactor calculation
-+ finish Mouse/Key listener
-+ test build
-+ more functions
-+ ...
++ <s>finish charactor calculation</s>
++ <s>finish Mouse/Key listener</s>
++ <s>test build</s>
++ <s>more functions</s>
++ <s>...</s>
+
+* * * * * * * * * * * * * * * * * 
+### UPDATE MARCH 2020 ###
+
+I am not gonna complete this version in the future. Switch to a python version in master branch.
