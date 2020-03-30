@@ -5,7 +5,7 @@ from random import random
 
 WIDTH = 10
 HEIGHT = 16
-MAX_TMP = 20
+MAX_TMP = 40
 
 class FailedException(BaseException):
     pass
@@ -14,8 +14,7 @@ tic_white = lambda *_:None
 
 def tic_orange(self, family):
     self.tmp = self.tmp - 1
-    if self.tmp == 0:
-        self.color = block.WHITE
+    if self.tmp == MAX_TMP//3*2:
         if not self.is_bottom:
             block_down = family(*self.id_down)
             if block_down.is_cursor:
@@ -23,6 +22,8 @@ def tic_orange(self, family):
             else:
                 block_down.color = block.ORANGE
                 block_down.tmp   = MAX_TMP
+    elif self.tmp == 0:
+        self.color = block.WHITE
 
 tic_functions = [tic_white, tic_orange]
 colors = [(128,128,128), (255,165,0)]
@@ -47,7 +48,7 @@ class block:
         
     def tic(self, family):
         self.tic_function(self, family)
-                
+    
 class base_game:
     
     def __init__(self):
