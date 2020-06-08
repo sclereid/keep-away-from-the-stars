@@ -1,6 +1,10 @@
 
+## system
+
 ## python
 
 *.py[coz]
 
 .ipynb_checkpoints
+
+__pycache__/*

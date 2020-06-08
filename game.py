@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from random import random
-
+from math import cos, pi
 
 WIDTH = 10
 HEIGHT = 16
 MAX_TMP = 40
+BLOCK_SIZE_H = 15
 
 class FailedException(BaseException):
     pass
@@ -26,7 +27,27 @@ def tic_orange(self, family):
         self.color = block.WHITE
 
 tic_functions = [tic_white, tic_orange]
+
+def vertically_flipped_block(color, front, tmp):
+    h0 = BLOCK_SIZE_H*cos(tmp/MAX_TMP*2*pi)
+    if h0 >= 0:
+        c = front
+        h = h0
+    else:
+        c = color
+        h = -h0
+    return c, lambda x, y: (x - BLOCK_SIZE_H, y - h, x + BLOCK_SIZE_H, y + h)
+
 colors = [(128,128,128), (255,165,0)]
+
+apr_white = lambda self: ([(255,10,10),(128,128,128)][self.is_cursor],
+    lambda x, y:(x-BLOCK_SIZE_H, y-BLOCK_SIZE_H, x+BLOCK_SIZE_H, y+BLOCK_SIZE_H))
+
+apr_orange = lambda self: vertically_flipped_block((255,165,0),
+                                                   [(255,10,10),(128,128,128)][self.is_cursor],
+                                                   self.tmp)
+
+apr_functions = [apr_white, apr_orange]
 
 class block:
     WHITE = 0
@@ -40,6 +61,7 @@ class block:
     def color(self, value):
         self._color = value
         self.tic_function = tic_functions[value]
+        self.rep_function = apr_functions[value]
     
     def __init__(self):
         self.color = block.WHITE
@@ -48,6 +70,9 @@ class block:
         
     def tic(self, family):
         self.tic_function(self, family)
+        
+    def get_apperance(self):
+        self.rep_function(self)
     
 class base_game:
     
