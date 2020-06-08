@@ -56,18 +56,8 @@ class window:
         for y in range(game.HEIGHT+1):
             for x in range(1, game.WIDTH+1):
                 b = self.game.family(x, y)
-                if b.is_cursor:
-                    self.imd.rectangle((x*32, window.IM_Y-y*32+16, x*32+30, window.IM_Y-y*32-16), fill=(255,10,10))
-                    continue
-                h0 = 15*cos(b.tmp/game.MAX_TMP*2*pi)
-                if h0 >= 0:
-                    color = (192,192,192)
-                    h = h0
-                else:
-                    color = game.colors[b.color]
-                    h = -h0
-                
-                self.imd.rectangle((x*32, window.IM_Y-y*32+h, x*32+30, window.IM_Y-y*32-h), fill=color)
+                color, fpos = b.appearance
+                self.imd.rectangle(fpos(x*32, window.IM_Y-y*32), color)
                 
         tkimg = ImageTk.PhotoImage(self.im)
         self._label = tk.Label(self.root, image=tkimg)

@@ -11,22 +11,21 @@ BLOCK_SIZE_H = 15
 class FailedException(BaseException):
     pass
 
-tic_white = lambda *_:None
+tic_white = tic_red = lambda *_:None
 
 def tic_orange(self, family):
     self.tmp = self.tmp - 1
     if self.tmp == MAX_TMP//3*2:
         if not self.is_bottom:
-            block_down = family(*self.id_down)
-            if block_down.is_cursor:
+            if self.down.color == block.RED:
                 raise FailedException
             else:
-                block_down.color = block.ORANGE
-                block_down.tmp   = MAX_TMP
+                self.down.color = block.ORANGE
+                self.down.tmp   = MAX_TMP
     elif self.tmp == 0:
         self.color = block.WHITE
 
-tic_functions = [tic_white, tic_orange]
+tic_functions = [tic_white, tic_red, tic_orange]
 
 def vertically_flipped_block(color, front, tmp):
     h0 = BLOCK_SIZE_H*cos(tmp/MAX_TMP*2*pi)
@@ -40,18 +39,21 @@ def vertically_flipped_block(color, front, tmp):
 
 colors = [(128,128,128), (255,165,0)]
 
-apr_white = lambda self: ([(255,10,10),(128,128,128)][self.is_cursor],
+apr_red = lambda self: ((255,10,10),
     lambda x, y:(x-BLOCK_SIZE_H, y-BLOCK_SIZE_H, x+BLOCK_SIZE_H, y+BLOCK_SIZE_H))
 
-apr_orange = lambda self: vertically_flipped_block((255,165,0),
-                                                   [(255,10,10),(128,128,128)][self.is_cursor],
+apr_white = lambda self: ((128,128,128),
+    lambda x, y:(x-BLOCK_SIZE_H, y-BLOCK_SIZE_H, x+BLOCK_SIZE_H, y+BLOCK_SIZE_H))
+
+apr_orange = lambda self: vertically_flipped_block((255,165,0),(128,128,128),
                                                    self.tmp)
 
-apr_functions = [apr_white, apr_orange]
+apr_functions = [apr_white, apr_red, apr_orange]
 
 class block:
     WHITE = 0
-    ORANGE = 1
+    RED = 1
+    ORANGE = 2
     
     @property
     def color(self):
@@ -66,13 +68,13 @@ class block:
     def __init__(self):
         self.color = block.WHITE
         self.tmp   = 0
-        self.is_cursor = False
         
     def tic(self, family):
         self.tic_function(self, family)
         
-    def get_apperance(self):
-        self.rep_function(self)
+    @property
+    def appearance(self):
+        return self.rep_function(self)
     
 class base_game:
     
@@ -87,12 +89,13 @@ class base_game:
                 b.is_bottom    = y == 0
                 b.is_top       = y == HEIGHT
                 
-                b.id_left  = b.is_far_left  or (x-1, y)
-                b.id_right = b.is_far_right or (x+1, y)
-                b.id_up    = b.is_top       or (x, y+1)
-                b.id_down  = b.is_bottom    or (x, y-1)
-        self.cursor = (4, 0)
-        self.family(*self.cursor).is_cursor = True
+                b.left  = b.is_far_left  or self.family(x-1, y)
+                b.right = b.is_far_right or self.family(x+1, y)
+                b.up    = b.is_top       or self.family(x, y+1)
+                b.down  = b.is_bottom    or self.family(x, y-1)
+        self.cursor = self.family(4, 0)
+        self.cursor.color = block.RED
+        self.cursor.tmp = MAX_TMP
         self.time= 0
     
     def update(self):
@@ -109,18 +112,20 @@ class base_game:
                         b.tmp = MAX_TMP
         
     def move_cursor_left(self):
-        if not self.family(*self.cursor).is_far_left:
-            self.family(*self.cursor).is_cursor = False
-            x, y = self.cursor
-            self.cursor = x-1, y
-            self.family(*self.cursor).is_cursor = True
+        if not self.cursor.is_far_left:
+            self.cursor.color = block.WHITE
+            self.cursor.tmp = 0
+            self.cursor = self.cursor.left
+            self.cursor.color = block.RED
+            self.cursor.tmp = MAX_TMP
         
     def move_cursor_right(self):
-        if not self.family(*self.cursor).is_far_right:
-            self.family(*self.cursor).is_cursor = False
-            x, y = self.cursor
-            self.cursor = x+1, y
-            self.family(*self.cursor).is_cursor = True
+        if not self.cursor.is_far_right:
+            self.cursor.color = block.WHITE
+            self.cursor.tmp = 0
+            self.cursor = self.cursor.right
+            self.cursor.color = block.RED
+            self.cursor.tmp = MAX_TMP
         
     def __repr__(self):
         """
@@ -133,7 +138,11 @@ class base_game:
             s = s + '| '
             for x in range(1, WIDTH+1):
                 b = self.family(x, y)
-                s = s + "%c%2d%c| "%("WO???"[b.color], b.tmp, " ^"[b.is_cursor])
+                s = s + "%c%2d| "%("WRO??"[b.color], b.tmp)
             s = s + '\n'
         return s
             
+if __name__ == '__main__':
+    g = base_game()
+    step = lambda n : ([g.update() for i in range(n)], g)[-1]
+    
