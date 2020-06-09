@@ -43,6 +43,7 @@ class window:
     def draw(self):
         self.canvas.after(window.REFRESH, self.draw)
         if self.drawing:
+            print('jammed at T+%d' % self.game.time)
             return
         self.drawing = True
         
@@ -58,7 +59,12 @@ class window:
                 b = self.game.family(x, y)
                 color, fpos = b.appearance
                 self.imd.rectangle(fpos(x*32, window.IM_Y-y*32), color)
-                
+        
+        for y in range(game.MAX_ENERGY):
+            b = self.game.energy_bar[y]
+            color, fpos = b.appearance
+            self.imd.rectangle(fpos(game.WIDTH*32+64, window.IM_Y-y*32), color)
+            
         tkimg = ImageTk.PhotoImage(self.im)
         self._label = tk.Label(self.root, image=tkimg)
         self._label.image = tkimg
@@ -71,6 +77,8 @@ class window:
             self.game.move_cursor_left()
         elif event.keycode == 39:
             self.game.move_cursor_right()
+        elif event.keycode == 38:
+            self.game.use_energy(1)
 
 if __name__ == '__main__':
     window()
