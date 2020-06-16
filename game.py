@@ -2,6 +2,7 @@
 
 from random import random
 from math import cos, pi
+from functools import lru_cache
 
 WIDTH = 10
 HEIGHT = 16
@@ -13,40 +14,44 @@ MAX_ENERGY = 10
 class FailedException(BaseException):
     pass
 
-const = lambda x: lambda *y: x
+class InsufficientEnergyException(BaseException):
+    def __init__(self, e):
+        self.e = e
 
-def tic_orange(self, time):
+const = lambda x: lambda *y, **k: x
+
+def tic_orange(self, **kw):
     self.tmp = self.tmp - 1
     if self.tmp == TMP_1:
         if not self.is_bottom:
             if self.down.color == block.RED:
                 raise FailedException
-            else:
+            elif self.down.color == block.WHITE:
                 self.down.color = block.ORANGE
                 self.down.tmp   = MAX_TMP
     elif self.tmp == 0:
         self.color = block.WHITE
 
-def tic_blue(self, time):
+def tic_blue(self, **kw):
     if self.tmp < MAX_TMP:
-        if time % 4 == 0:
+        if kw['time'] % 4 == 0:
             self.tmp = self.tmp + 1
     elif not self.is_top:
         if self.up.color == block.BLUE_FALLING:
-            if self.up.tmp < self.up.tmp2:
-                if time % 4 == 0:
-                    self.up.tmp2 = self.up.tmp2 + 1
-            else:
-                self.up.color = block.BLUE
-                self.up.tmp2 = 0
-                self.color = block.BLUE_STATIC
+            #if self.up.tmp < self.up.tmp2:
+            #    if kw['time'] % 4 == 0:
+            #        self.up.tmp2 = self.up.tmp2 + 1
+            #else:
+            self.up.color = block.BLUE
+            self.up.tmp2 = 0
+            self.color = block.BLUE_STATIC
         elif self.up.color == block.WHITE:
             self.up.color = block.BLUE
             self.color = block.BLUE_STATIC
     else:
         self.tmp = MAX_TMP
 
-def tic_blue_falling(self, time):
+def tic_blue_falling(self, **kw):
     if not (self.down.color == block.BLUE and self.tmp <= self.tmp2):
         self.tmp = self.tmp - 1
     if self.tmp <= 0:
@@ -57,26 +62,73 @@ def tic_blue_falling(self, time):
         self.down.tmp = MAX_TMP
         self.down.tmp2  = self.tmp2
 
-def tic_shining(self, time):
+def tic_shining(self, **kw):
     if self.tmp > 0:
-        if time % 2 == 0:
+        if kw['time'] % 2 == 0:
             self.tmp = self.tmp - 1
     else:
         self.color = self.tmp2
 
-def tic_blue_transiting(self, time):
+def tic_blue_transiting(self, **kw):
     if self.tmp2 > 0:
-        if time % 2 == 0:
+        if kw['time'] % 2 == 0:
             self.tmp2 = self.tmp2 - 1
     else:
         self.tmp2 = self.tmp
         self.color = block.BLUE_FALLING
 
+def tic_green(self, **kw):
+    self.tmp = self.tmp - 1
+    if self.tmp == TMP_1:
+        if not self.is_top:
+            if self.up.color == block.WHITE:
+                self.up.color = block.GREEN
+                self.up.tmp   = MAX_TMP
+            else:
+                self.color = block.GREEN_FADING
+                self.tmp = MAX_TMP
+    elif self.tmp == 0:
+        self.color = block.WHITE
+        
+def tic_green_fading(self, **kw):
+    if kw['time'] % 3 == 0:
+        self.tmp = self.tmp - 1
+    if self.tmp == 0:
+        self.color = block.WHITE
+        
+def tic_yellow(self, **kw):
+    self.tmp = self.tmp - 1
+    if self.tmp == TMP_1:
+        if not (self.is_top or self.up.color == block.BISTRE):
+            self.up.color = block.YELLOW
+            self.up.tmp   = MAX_TMP
+    elif self.tmp == 0:
+        self.color = block.WHITE
+
+def tic_bistre(self, **kw):
+    self.tmp = self.tmp - 1
+    if self.tmp == TMP_1:
+        if not self.is_bottom:
+            if self.down.color == block.RED:
+                raise FailedException
+            elif True:
+                self.down.color = block.BISTRE
+                self.down.tmp   = MAX_TMP
+    elif self.tmp == 0:
+        self.color = block.WHITE 
+
+def tic_grey(self, **kw):
+    self.tmp = self.tmp - 1
+    if self.tmp == 0:
+        self.color = block.WHITE
+
 tic_white = tic_red = tic_blue_static = const(None)
 
 tic_functions = [tic_white, tic_red, tic_orange, tic_blue, tic_blue_static,
-                 tic_blue_falling, tic_shining, tic_blue_transiting]
+                 tic_blue_falling, tic_shining, tic_blue_transiting, tic_green,
+                 tic_green_fading, tic_yellow, tic_bistre, tic_grey]
 
+@lru_cache()
 def vertically_flipped_block(color, front, tmp):
     h0 = BLOCK_SIZE_H*cos(tmp/MAX_TMP*2*pi)
     if h0 >= 0:
@@ -89,24 +141,42 @@ def vertically_flipped_block(color, front, tmp):
 
 static_block = lambda color: (color, lambda x, y:(x-BLOCK_SIZE_H, y-BLOCK_SIZE_H, x+BLOCK_SIZE_H, y+BLOCK_SIZE_H))
 
+@lru_cache()
+def transiting_block(color_0, color_max, tmp):
+    r0, g0, b0 = color_0
+    rm, gm, bm = color_max
+    m = tmp/MAX_TMP
+    l = 1.0 - m
+    return static_block((round(l*r0+m*rm), round(l*g0+m*gm), round(l*b0+m*bm)))
+
 colors = [(128,128,128), (255,165,0)]
 
 apr_red = const(static_block((255, 10, 10)))
 
 apr_white = const(static_block((128,128,128)))
 
-apr_orange = lambda self: vertically_flipped_block((255,165,0),(128,128,128),
-                                                   self.tmp)
+apr_orange = lambda self: vertically_flipped_block((255,165,0),(128,128,128), self.tmp)
 
 apr_blue = apr_blue_falling = apr_blue_transiting = lambda self: \
-    vertically_flipped_block((64,64,255), (128,128,128), self.tmp)
+    vertically_flipped_block((64,64,255), (128,128,128), self.tmp/2)
 
 apr_blue_static = const(static_block((10,10,255)))
 
 apr_shining = lambda self: static_block([(255,255,255),(64,64,64)][self.tmp%2])
 
+apr_green = lambda self: vertically_flipped_block((0,102,0), (128,128,128), self.tmp)
+
+apr_green_fading = lambda self: transiting_block((128,128,128), (0,102,0), self.tmp)
+
+apr_yellow = lambda self: vertically_flipped_block((255,255,0), (128,128,128), self.tmp)
+
+apr_bistre = lambda self: vertically_flipped_block((61,43,31),(128,128,128), self.tmp)
+
+apr_grey = lambda self: vertically_flipped_block((64,64,64), (128,128,128), self.tmp)
+
 apr_functions = [apr_white, apr_red, apr_orange, apr_blue, apr_blue_static,
-                 apr_blue_falling, apr_shining, apr_blue_transiting]
+                 apr_blue_falling, apr_shining, apr_blue_transiting, apr_green,
+                 apr_green_fading, apr_yellow, apr_bistre, apr_grey]
 
 class block:
     WHITE = 0
@@ -117,6 +187,11 @@ class block:
     BLUE_FALLING = 5
     SHINING = 6
     BLUE_TRANSITING = 7
+    GREEN = 8
+    GREEN_FADING = 9
+    YELLOW = 10
+    BISTRE = 11
+    GREY = 12
     
     @property
     def color(self):
@@ -133,8 +208,8 @@ class block:
         self.tmp   = 0
         self.tmp2  = 0
         
-    def tic(self, time):
-        self.tic_function(self, time)
+    def tic(self, t):
+        self.tic_function(self, time=t)
         
     @property
     def appearance(self):
@@ -161,7 +236,7 @@ class base_game:
         self.cursor.color = block.RED
         self.cursor.tmp = MAX_TMP
         
-        self.energy_bar = [block() for x in range(MAX_ENERGY)];
+        self.energy_bar = [block() for x in range(MAX_ENERGY)]
         for i in range(MAX_ENERGY):
             b = self.energy_bar[i]
             b.is_bottom = i == 0
@@ -182,8 +257,11 @@ class base_game:
             for x in range(1, WIDTH+1):
                 b = self.family(x, HEIGHT)
                 if b.color == block.WHITE:
-                    if random() < 1/7:
+                    if random() < 2/7:
                         b.color = block.ORANGE
+                        b.tmp = MAX_TMP
+                    elif random() < 1/20:
+                        b.color = block.BISTRE
                         b.tmp = MAX_TMP
         
     def move_cursor_left(self):
@@ -203,7 +281,10 @@ class base_game:
             self.cursor.tmp = MAX_TMP
         
     def use_energy(self, n):
-        e = [b.color for b in self.energy_bar].index(block.BLUE)
+        try:
+            e = [b.color for b in self.energy_bar].index(block.BLUE)
+        except ValueError:
+            raise InsufficientEnergyException(-1)
         if e >= n:
             self.energy_bar[e-n].color = block.SHINING
             self.energy_bar[e-n].tmp = 5
@@ -215,14 +296,53 @@ class base_game:
             self.energy_bar[e].color = block.BLUE_TRANSITING
             self.energy_bar[e].tmp2 = 5
         else:
-            print('current energy (', e, '/', MAX_ENERGY, ') is insufficient')
+            raise InsufficientEnergyException(e)
+    
+    def powerup_mono(self):
+        try:
+            self.use_energy(1)
+            self.cursor.up.color = block.GREEN
+            self.cursor.up.tmp = MAX_TMP
+        except InsufficientEnergyException as isee:
+            print('current energy (', isee.e , '/', MAX_ENERGY, ') is insufficient')
+            
+    def powerup_line(self):
+        try:
+            self.use_energy(3)
+            self.cursor.up.color = block.YELLOW
+            self.cursor.up.tmp = MAX_TMP
+        except InsufficientEnergyException as isee:
+            print('current energy (', isee.e , '/', MAX_ENERGY, ') is insufficient')
+        
+    def powerup_ninja(self):
+        try:
+            self.use_energy(5)
+            for y in range(HEIGHT+1):
+                for x in range(1, WIDTH+1):
+                    b = self.family(x, y)
+                    if b.color == block.ORANGE:
+                        b.color = block.GREY
+        except InsufficientEnergyException as isee:
+            if isee.e == -1:
+                k = [b.color for b in self.energy_bar].index(block.SHINING)
+                if k+4 < MAX_ENERGY and self.energy_bar[k].color == block.SHINING:
+                    self.energy_bar[k].tmp += MAX_TMP
+                    for y in range(HEIGHT+1):
+                        for x in range(1, WIDTH+1):
+                            b = self.family(x, y)
+                            if b.color == block.BISTRE:
+                                b.color = block.ORANGE
+                            elif b.color == block.ORANGE:
+                                b.color = block.GREY
+            else:
+                print('current energy (', isee.e , '/', MAX_ENERGY, ') is insufficient')
         
     def __repr__(self):
         """
         game.__repr__()
         This method is mainly designed for testing
         """
-        CLIST = ['W ', 'R ', 'O ', 'B+', 'B=', 'B-', 'S^', 'B^']
+        CLIST = ['W ', 'R ', 'O ', 'B+', 'B=', 'B-', 'S^', 'B^', 'G ', 'G-', 'Y ', 'BI', 'GR']
         s = "game object at time %d\n" % self.time 
         s = s + '-'*61 + '\n'
         for y in range(HEIGHT+1):
@@ -239,7 +359,7 @@ class base_game:
             
 if __name__ == '__main__':
     g = base_game()
-    step = lambda n : const(g)([g.update() for i in range(n)])
+    step = lambda n=1 : const(g)([g.update() for i in range(n)])
     ml = lambda: const(g)(g.move_cursor_left())
     mr = lambda: const(g)(g.move_cursor_right())
     use = lambda n : const(g)(g.use_energy(n))

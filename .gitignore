@@ -8,3 +8,9 @@
 .ipynb_checkpoints
 
 __pycache__/*
+
+## pyinstaller
+
+build/*
+*.spec
+dist/*
