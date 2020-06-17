@@ -2,7 +2,7 @@
 
 from random import random
 from math import cos, pi
-from functools import lru_cache
+from functools import lru_cache, partial
 
 WIDTH = 10
 HEIGHT = 16
@@ -25,7 +25,7 @@ def tic_orange(self, **kw):
     if self.tmp == TMP_1:
         if not self.is_bottom:
             if self.down.color == block.RED:
-                raise FailedException
+                self.down.tmp2 = block.ORANGE
             elif self.down.color == block.WHITE:
                 self.down.color = block.ORANGE
                 self.down.tmp   = MAX_TMP
@@ -110,7 +110,7 @@ def tic_bistre(self, **kw):
     if self.tmp == TMP_1:
         if not self.is_bottom:
             if self.down.color == block.RED:
-                raise FailedException
+                self.down.tmp2 = block.BISTRE
             elif True:
                 self.down.color = block.BISTRE
                 self.down.tmp   = MAX_TMP
@@ -122,7 +122,13 @@ def tic_grey(self, **kw):
     if self.tmp == 0:
         self.color = block.WHITE
 
-tic_white = tic_red = tic_blue_static = const(None)
+def tic_red(self, **kw):
+    if self.tmp2 != block.WHITE:
+        self.tmp = self.tmp - 1
+        if self.tmp == 0:
+            raise FailedException
+
+tic_white = tic_blue_static = const(None)
 
 tic_functions = [tic_white, tic_red, tic_orange, tic_blue, tic_blue_static,
                  tic_blue_falling, tic_shining, tic_blue_transiting, tic_green,
@@ -151,7 +157,7 @@ def transiting_block(color_0, color_max, tmp):
 
 colors = [(128,128,128), (255,165,0)]
 
-apr_red = const(static_block((255, 10, 10)))
+apr_red = lambda self: vertically_flipped_block((255,10,10), block.flippable_color_list[self.tmp2], self.tmp)
 
 apr_white = const(static_block((128,128,128)))
 
@@ -178,6 +184,7 @@ apr_functions = [apr_white, apr_red, apr_orange, apr_blue, apr_blue_static,
                  apr_blue_falling, apr_shining, apr_blue_transiting, apr_green,
                  apr_green_fading, apr_yellow, apr_bistre, apr_grey]
 
+
 class block:
     WHITE = 0
     RED = 1
@@ -192,6 +199,8 @@ class block:
     YELLOW = 10
     BISTRE = 11
     GREY = 12
+    
+    flippable_color_list = {WHITE:(128,128,128), ORANGE:(255,165,0), BISTRE:(61,43,31)}
     
     @property
     def color(self):
@@ -214,9 +223,9 @@ class block:
     @property
     def appearance(self):
         return self.rep_function(self)
-    
+
 class base_game:
-    
+    LEVEL = 1
     def __init__(self):
         self.blocks = [[block() for x in range(1, WIDTH+1)] for y in range(HEIGHT+1)]
         self.family = lambda x, y: self.blocks[y][x-1]
@@ -234,7 +243,7 @@ class base_game:
                 b.down  = b.is_bottom    or self.family(x, y-1)
         self.cursor = self.family(4, 0)
         self.cursor.color = block.RED
-        self.cursor.tmp = MAX_TMP
+        self.cursor.tmp = MAX_TMP // 2
         
         self.energy_bar = [block() for x in range(MAX_ENERGY)]
         for i in range(MAX_ENERGY):
@@ -246,13 +255,15 @@ class base_game:
         self.energy_bar[0].color = block.BLUE
         self.time= 0
     
-    def update(self):
+    def update(self, scorecallback=const(None)):
         self.time = self.time + 1
         for s in self.blocks:
             for t in s:
                 t.tic(self.time)
         for u in self.energy_bar:
             u.tic(self.time)
+        if self.time % (MAX_TMP//4) == 0:
+            scorecallback(1)
         if self.time % MAX_TMP == 0:
             for x in range(1, WIDTH+1):
                 b = self.family(x, HEIGHT)
@@ -265,20 +276,24 @@ class base_game:
                         b.tmp = MAX_TMP
         
     def move_cursor_left(self):
-        if not self.cursor.is_far_left:
+        if not self.cursor.is_far_left \
+            and self.cursor.left.color == self.cursor.tmp2 == block.WHITE:
             self.cursor.color = block.WHITE
             self.cursor.tmp = 0
             self.cursor = self.cursor.left
             self.cursor.color = block.RED
-            self.cursor.tmp = MAX_TMP
+            self.cursor.tmp = MAX_TMP // 2
+            self.cursor.tmp2 = block.WHITE
         
     def move_cursor_right(self):
-        if not self.cursor.is_far_right:
+        if not self.cursor.is_far_left \
+            and self.cursor.left.color == self.cursor.tmp2 == block.WHITE:
             self.cursor.color = block.WHITE
             self.cursor.tmp = 0
             self.cursor = self.cursor.right
             self.cursor.color = block.RED
-            self.cursor.tmp = MAX_TMP
+            self.cursor.tmp = MAX_TMP // 2
+            self.cursor.tmp2 = block.WHITE
         
     def use_energy(self, n):
         try:
@@ -298,25 +313,27 @@ class base_game:
         else:
             raise InsufficientEnergyException(e)
     
-    def powerup_mono(self):
+    def powerup_mono(self, scorecallback=partial(print, "Increase score by")):
         try:
             self.use_energy(1)
             self.cursor.up.color = block.GREEN
             self.cursor.up.tmp = MAX_TMP
+            scorecallback(25)
         except InsufficientEnergyException as isee:
             print('current energy (', isee.e , '/', MAX_ENERGY, ') is insufficient')
             
-    def powerup_line(self):
+    def powerup_line(self, scorecallback=partial(print, "Increase score by")):
         try:
             self.use_energy(3)
             self.cursor.up.color = block.YELLOW
             self.cursor.up.tmp = MAX_TMP
+            scorecallback(50)
         except InsufficientEnergyException as isee:
             print('current energy (', isee.e , '/', MAX_ENERGY, ') is insufficient')
         
-    def powerup_ninja(self):
+    def powerup_ninja(self, scorecallback=partial(print, "Increase score by")):
         try:
-            self.use_energy(5)
+            self.use_energy(4)
             for y in range(HEIGHT+1):
                 for x in range(1, WIDTH+1):
                     b = self.family(x, y)
@@ -325,7 +342,7 @@ class base_game:
         except InsufficientEnergyException as isee:
             if isee.e == -1:
                 k = [b.color for b in self.energy_bar].index(block.SHINING)
-                if k+4 < MAX_ENERGY and self.energy_bar[k].color == block.SHINING:
+                if k+4 < MAX_ENERGY and self.energy_bar[k+3].color == block.SHINING:
                     self.energy_bar[k].tmp += MAX_TMP
                     for y in range(HEIGHT+1):
                         for x in range(1, WIDTH+1):
@@ -356,7 +373,54 @@ class base_game:
                 s = s + '|%s%2d %2d|'%(CLIST[b.color], b.tmp, b.tmp2)
             s = s + '\n'
         return s
-            
+
+class derived_game(base_game):
+    def __init__(self, g):
+        #for attr in ['blocks', 'family', 'cursor', 'energy_bar', 'time']:
+        #    exec("self.%s = g.%s" % (attr, attr))
+        for k in vars(g):
+            self.__setattr__(k, g.__getattribute__(k))
+        for y in range(HEIGHT+1):
+            for x in range(1, WIDTH+1):
+                b = self.family(x, y)
+                if not (b.color == block.WHITE or b.color == block.RED):
+                    b.color = block.GREY
+                    b.tmp2 = 0
+
+class lv2_game(derived_game):
+    LEVEL = 2    
+    def update(self, scorecallback=const(None)):
+        self.time = self.time + 1
+        for s in self.blocks:
+            for t in s:
+                t.tic(self.time)
+        for u in self.energy_bar:
+            u.tic(self.time)
+        if self.time % (MAX_TMP//3) == 0:
+            scorecallback(1)
+        if self.time % MAX_TMP == 0:
+            for x in range(1, WIDTH+1):
+                b = self.family(x, HEIGHT)
+                if b.color == block.WHITE:
+                    if random() < 3/7:
+                        b.color = block.ORANGE
+                        b.tmp = MAX_TMP
+                    elif random() < 1/15:
+                        b.color = block.BISTRE
+                        b.tmp = MAX_TMP
+
+class lv3_game(derived_game):
+    LEVEL = 23
+    def update(self, scorecallback=const(None)):
+        base_game.update(self, scorecallback)
+        base_game.update(self, scorecallback)
+
+class lv4_game(derived_game):
+    LEVEL = 23
+    def update(self, scorecallback=const(None)):
+        lv2_game.update(self, scorecallback)
+        lv2_game.update(self, scorecallback)
+
 if __name__ == '__main__':
     g = base_game()
     step = lambda n=1 : const(g)([g.update() for i in range(n)])
