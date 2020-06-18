@@ -128,11 +128,22 @@ def tic_red(self, **kw):
         if self.tmp == 0:
             raise FailedException
 
+def tic_brass(self, **kw):
+    if not self.is_top and self.up.color == block.WHITE:
+        self.up.color = block.BRASS
+        self.up.tmp = self.tmp
+        #self.color = block.WHITE
+        #self.tmp = 0
+    else:
+        self.tmp = self.tmp - 1
+        if self.tmp == 0:
+            self.color = block.WHITE
+
 tic_white = tic_blue_static = const(None)
 
 tic_functions = [tic_white, tic_red, tic_orange, tic_blue, tic_blue_static,
                  tic_blue_falling, tic_shining, tic_blue_transiting, tic_green,
-                 tic_green_fading, tic_yellow, tic_bistre, tic_grey]
+                 tic_green_fading, tic_yellow, tic_bistre, tic_grey, tic_brass]
 
 @lru_cache()
 def vertically_flipped_block(color, front, tmp):
@@ -180,9 +191,11 @@ apr_bistre = lambda self: vertically_flipped_block((61,43,31),(128,128,128), sel
 
 apr_grey = lambda self: vertically_flipped_block((64,64,64), (128,128,128), self.tmp)
 
+apr_brass = lambda self: transiting_block((128,128,128), (205,149,117), self.tmp*2)
+
 apr_functions = [apr_white, apr_red, apr_orange, apr_blue, apr_blue_static,
                  apr_blue_falling, apr_shining, apr_blue_transiting, apr_green,
-                 apr_green_fading, apr_yellow, apr_bistre, apr_grey]
+                 apr_green_fading, apr_yellow, apr_bistre, apr_grey, apr_brass]
 
 
 class block:
@@ -199,6 +212,7 @@ class block:
     YELLOW = 10
     BISTRE = 11
     GREY = 12
+    BRASS = 13
     
     flippable_color_list = {WHITE:(128,128,128), ORANGE:(255,165,0), BISTRE:(61,43,31)}
     
@@ -275,7 +289,7 @@ class base_game:
                         b.color = block.BISTRE
                         b.tmp = MAX_TMP
         
-    def move_cursor_left(self):
+    def move_cursor_left(self, failcallback=lambda:print('Cannot move left')):
         if not self.cursor.is_far_left \
             and self.cursor.left.color == self.cursor.tmp2 == block.WHITE:
             self.cursor.color = block.WHITE
@@ -284,16 +298,20 @@ class base_game:
             self.cursor.color = block.RED
             self.cursor.tmp = MAX_TMP // 2
             self.cursor.tmp2 = block.WHITE
+        else:
+            failcallback()
         
-    def move_cursor_right(self):
-        if not self.cursor.is_far_left \
-            and self.cursor.left.color == self.cursor.tmp2 == block.WHITE:
+    def move_cursor_right(self, failcallback=lambda:print('Cannot move right')):
+        if not self.cursor.is_far_right \
+            and self.cursor.right.color == self.cursor.tmp2 == block.WHITE:
             self.cursor.color = block.WHITE
             self.cursor.tmp = 0
             self.cursor = self.cursor.right
             self.cursor.color = block.RED
             self.cursor.tmp = MAX_TMP // 2
             self.cursor.tmp2 = block.WHITE
+        else:
+            failcallback()
         
     def use_energy(self, n):
         try:
@@ -313,25 +331,30 @@ class base_game:
         else:
             raise InsufficientEnergyException(e)
     
-    def powerup_mono(self, scorecallback=partial(print, "Increase score by")):
+    def powerup_mono(self, scorecallback=partial(print, "Increase score by"), failcallback=lambda:"energy is insufficient"):
         try:
-            self.use_energy(1)
+            self.use_energy(2)
             self.cursor.up.color = block.GREEN
             self.cursor.up.tmp = MAX_TMP
             scorecallback(25)
-        except InsufficientEnergyException as isee:
-            print('current energy (', isee.e , '/', MAX_ENERGY, ') is insufficient')
+        except InsufficientEnergyException:
+            try:
+                self.use_energy(1)
+                self.cursor.up.color = block.BRASS
+                self.cursor.up.tmp = MAX_TMP // 2
+            except InsufficientEnergyException:
+                failcallback()
             
-    def powerup_line(self, scorecallback=partial(print, "Increase score by")):
+    def powerup_line(self, scorecallback=partial(print, "Increase score by"), failcallback=lambda:"energy is insufficient"):
         try:
             self.use_energy(3)
             self.cursor.up.color = block.YELLOW
             self.cursor.up.tmp = MAX_TMP
             scorecallback(50)
-        except InsufficientEnergyException as isee:
-            print('current energy (', isee.e , '/', MAX_ENERGY, ') is insufficient')
+        except InsufficientEnergyException:
+            failcallback()
         
-    def powerup_ninja(self, scorecallback=partial(print, "Increase score by")):
+    def powerup_ninja(self, scorecallback=partial(print, "Increase score by"), failcallback=lambda:"energy is insufficient"):
         try:
             self.use_energy(4)
             for y in range(HEIGHT+1):
@@ -339,6 +362,7 @@ class base_game:
                     b = self.family(x, y)
                     if b.color == block.ORANGE:
                         b.color = block.GREY
+            scorecallback(70)
         except InsufficientEnergyException as isee:
             if isee.e == -1:
                 k = [b.color for b in self.energy_bar].index(block.SHINING)
@@ -352,14 +376,15 @@ class base_game:
                             elif b.color == block.ORANGE:
                                 b.color = block.GREY
             else:
-                print('current energy (', isee.e , '/', MAX_ENERGY, ') is insufficient')
+                failcallback()
         
     def __repr__(self):
         """
         game.__repr__()
         This method is mainly designed for testing
         """
-        CLIST = ['W ', 'R ', 'O ', 'B+', 'B=', 'B-', 'S^', 'B^', 'G ', 'G-', 'Y ', 'BI', 'GR']
+        CLIST = ['W ', 'R ', 'O ', 'B+', 'B=', 'B-', 'S^', 'B^', 'G ', 'G-',
+                 'Y ', 'BI', 'GR', 'BR']
         s = "game object at time %d\n" % self.time 
         s = s + '-'*61 + '\n'
         for y in range(HEIGHT+1):
