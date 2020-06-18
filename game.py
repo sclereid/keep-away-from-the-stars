@@ -38,10 +38,6 @@ def tic_blue(self, **kw):
             self.tmp = self.tmp + 1
     elif not self.is_top:
         if self.up.color == block.BLUE_FALLING:
-            #if self.up.tmp < self.up.tmp2:
-            #    if kw['time'] % 4 == 0:
-            #        self.up.tmp2 = self.up.tmp2 + 1
-            #else:
             self.up.color = block.BLUE
             self.up.tmp2 = 0
             self.color = block.BLUE_STATIC
@@ -452,4 +448,3 @@ if __name__ == '__main__':
     ml = lambda: const(g)(g.move_cursor_left())
     mr = lambda: const(g)(g.move_cursor_right())
     use = lambda n : const(g)(g.use_energy(n))
-    

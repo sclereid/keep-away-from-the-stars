@@ -2,11 +2,6 @@
 
 import tkinter as tk
 import tkinter.font as tkfont
-#import tkinter.messagebox as msgbox
-
-#from math import cos, pi
-
-#from PIL import Image, ImageDraw, ImageTk
 
 import game
 
@@ -28,7 +23,6 @@ class window:
         self.root.title('Simulater')
         #self.root.resizable(0, 0)
         
-        
         font = tkfont.Font(self.root, size=18, weight=tkfont.BOLD)
         self.canvas = tk.Canvas(self.root, width=window.SIZE_X, height=window.SIZE_Y, bd=0, bg='black')
         self.canvas.pack(side=tk.LEFT)
@@ -38,13 +32,6 @@ class window:
         self.score_text_id = self.canvas.create_text(370, 200, text="SCORE", font=font, fill="#233333", anchor=tk.W)
         self.score_id = self.canvas.create_text(370, 230, text="", font=font, fill="#233333", anchor=tk.W)
         self.level_id = self.canvas.create_text(370, 160, text="LEVEL 1", font=font, fill="#233388", anchor=tk.W)
-        #self.im = Image.new('RGB', (self.IM_X, self.IM_Y+50), (10, 10, 10))
-        #self.imd = ImageDraw.Draw(self.im)
-        #tkimg = ImageTk.PhotoImage(self.im)
-        #self._label = tk.Label(self.root, image=tkimg)
-        #self._label.image = tkimg #hack a refrance to make python2.7 happy
-        #self._image = self.canvas.create_image(self.IM_X//2, self.IM_Y//2, image=tkimg)
-        self.restart_instruction = None
         self.start_game()
         self.root.mainloop()
     
@@ -107,15 +94,12 @@ class window:
             self.game.update(scorecallback=self.add_score)
         except game.FailedException:
             self.game_status = window.GAME_OVER
-            #msgbox.showinfo("Game Over", "Your score is %d" % self.score)
             
-        #self.imd.rectangle((0, 0, self.IM_X, self.IM_Y), fill=(0,0,0))
         self.canvas.itemconfig(self.score_id, text="%d" % self.score, fill=['#233333', '#ffaaaa'][(self.score_blink_tmp//4) % 2])
         if self.score_blink_tmp > 0:
             self.score_blink_tmp = self.score_blink_tmp - 1
         
         i = 0
-        
         for y in range(game.HEIGHT+1):
             for x in range(1, game.WIDTH+1):
                 b = self.game.family(x, y)
@@ -126,21 +110,12 @@ class window:
                 else:
                     self.canvas.itemconfig(self.rects_id[i], fill=color_num(color))
                 i = i + 1
-                #self.imd.rectangle(fpos(x*32, window.IM_Y-y*32), color)
-        
-        
         for y in range(game.MAX_ENERGY):
             b = self.game.energy_bar[y]
             color, fpos = b.appearance
             self.canvas.coords(self.rects_id[i], fpos(game.WIDTH*32+64, window.IM_Y-y*32))
             self.canvas.itemconfig(self.rects_id[i], fill=color_num(color))
             i = i + 1
-            #self.imd.rectangle(fpos(game.WIDTH*32+64, window.IM_Y-y*32), color)
-            
-        #tkimg = ImageTk.PhotoImage(self.im)
-        #self._label = tk.Label(self.root, image=tkimg)
-        #self._label.image = tkimg
-        #self.canvas.itemconfig(self._image, image=tkimg)
         
         self.drawing = False
         
