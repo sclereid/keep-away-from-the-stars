@@ -1,7 +1,6 @@
 keep-away-from-the-stars
 =======================
-### A game, to be finished
-- that is to say, not finished yet
+### A game
 
 * * * * * * * * * * * * * * * * * 
 
@@ -10,6 +9,8 @@ This application was intended to finish in java. For some reasons, I left it the
 The program shall be rewritten entirely. (March 2020)
 
 This project is a part of the final assignment this semester now. (June 2020)
+
+Recent tests are stable.
 
 ***--- REMINDER***
 

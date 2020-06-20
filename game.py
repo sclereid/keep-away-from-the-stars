@@ -128,8 +128,6 @@ def tic_brass(self, **kw):
     if not self.is_top and self.up.color == block.WHITE:
         self.up.color = block.BRASS
         self.up.tmp = self.tmp
-        #self.color = block.WHITE
-        #self.tmp = 0
     else:
         self.tmp = self.tmp - 1
         if self.tmp == 0:
@@ -161,8 +159,6 @@ def transiting_block(color_0, color_max, tmp):
     m = tmp/MAX_TMP
     l = 1.0 - m
     return static_block((round(l*r0+m*rm), round(l*g0+m*gm), round(l*b0+m*bm)))
-
-colors = [(128,128,128), (255,165,0)]
 
 apr_red = lambda self: vertically_flipped_block((255,10,10), block.flippable_color_list[self.tmp2], self.tmp)
 
@@ -338,6 +334,7 @@ class base_game:
                 self.use_energy(1)
                 self.cursor.up.color = block.BRASS
                 self.cursor.up.tmp = MAX_TMP // 2
+                scorecallback(15)
             except InsufficientEnergyException:
                 failcallback()
             
@@ -431,13 +428,13 @@ class lv2_game(derived_game):
                         b.tmp = MAX_TMP
 
 class lv3_game(derived_game):
-    LEVEL = 23
+    LEVEL = 3
     def update(self, scorecallback=const(None)):
         base_game.update(self, scorecallback)
         base_game.update(self, scorecallback)
 
 class lv4_game(derived_game):
-    LEVEL = 23
+    LEVEL = 4
     def update(self, scorecallback=const(None)):
         lv2_game.update(self, scorecallback)
         lv2_game.update(self, scorecallback)

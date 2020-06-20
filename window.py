@@ -9,19 +9,21 @@ def color_num(rgb):
     return '#%02x%02x%02x' % rgb
 
 class window:
-    SIZE_X = 600
-    SIZE_Y = 700
+    SIZE_X = 500
+    SIZE_Y = 600
     IM_X = 600
-    IM_Y = 600
+    IM_Y = 550
     REFRESH = 25
     
     PLAYING = 1
-    GAME_OVER = 2
+    PAUSED = 2
+    GAME_OVER = 3
     
     def __init__(self):
         self.root = tk.Tk()#tk.Toplevel()
-        self.root.title('Simulater')
-        #self.root.resizable(0, 0)
+        self.root.title('Keep away from the stars')
+        self.root.iconbitmap('res/icon.ico')
+        self.root.resizable(0, 0)
         
         font = tkfont.Font(self.root, size=18, weight=tkfont.BOLD)
         self.canvas = tk.Canvas(self.root, width=window.SIZE_X, height=window.SIZE_Y, bd=0, bg='black')
@@ -31,7 +33,7 @@ class window:
                          in range((game.HEIGHT+1)*game.WIDTH + game.MAX_ENERGY)]
         self.score_text_id = self.canvas.create_text(370, 200, text="SCORE", font=font, fill="#233333", anchor=tk.W)
         self.score_id = self.canvas.create_text(370, 230, text="", font=font, fill="#233333", anchor=tk.W)
-        self.level_id = self.canvas.create_text(370, 160, text="LEVEL 1", font=font, fill="#233388", anchor=tk.W)
+        self.level_id = self.canvas.create_text(370, 160, text="", font=font, fill="#233388", anchor=tk.W)
         self.start_game()
         self.root.mainloop()
     
@@ -43,6 +45,7 @@ class window:
     def game_status(self, s):
         self._game_status = s
         self.update_method = {window.PLAYING:   self.draw,
+                              window.PAUSED:    self.pause_msg,
                               window.GAME_OVER: self.game_over_msg}[s]
     @property
     def stressing(self):
@@ -57,6 +60,7 @@ class window:
     def start_game(self):
         self.game = game.base_game()
         self.game_status = window.PLAYING
+        self.canvas.itemconfig(self.level_id, text="LEVEL 1", fill='#23cc88')
         self.time = 0
         self.score = 0
         self.score_blink_tmp = 0
@@ -129,7 +133,18 @@ class window:
             for w in wids:
                 self.canvas.delete(w)
             self.start_game()
-        self.restart_instruction = restart_game
+        self.continue_instruction = restart_game
+        
+    def pause_msg(self):
+        font1 = tkfont.Font(self.root, size=32, weight=tkfont.BOLD)
+        wids = [self.canvas.create_oval(82, 242, 98, 258, fill="#ff8888", outline=''),
+                self.canvas.create_text(180, 250, text="PAUSED", fill="#ff8888", font=font1)]
+        def continue_game():
+            for w in wids:
+                self.canvas.delete(w)
+            self.game_status = window.PLAYING
+            self.draw()
+        self.continue_instruction = continue_game
     
     def on_key(self, event):
         if self.game_status == window.PLAYING:
@@ -143,11 +158,16 @@ class window:
                 self.game.move_cursor_right(failcallback=self.stress)
             elif event.keycode == 40:
                 self.game.powerup_mono(scorecallback=self.add_score, failcallback=self.stress)
+            elif event.keycode == 80:
+                self.game_status = window.PAUSED
             else:
                 print(event.keycode)
+        elif self.game_status == window.PAUSED:
+            if event.keycode == 80:
+                self.continue_instruction()
         elif self.game_status == window.GAME_OVER:
             if event.keycode == 82:
-                self.restart_instruction()
+                self.continue_instruction()
 
 if __name__ == '__main__':
     w = window()
