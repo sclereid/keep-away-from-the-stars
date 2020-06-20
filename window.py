@@ -3,10 +3,19 @@
 import tkinter as tk
 import tkinter.font as tkfont
 
+import os, sys
+
 import game
 
 def color_num(rgb):
     return '#%02x%02x%02x' % rgb
+
+def resource_path(relative_path):
+    try: # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 class window:
     SIZE_X = 500
@@ -22,7 +31,7 @@ class window:
     def __init__(self):
         self.root = tk.Tk()#tk.Toplevel()
         self.root.title('Keep away from the stars')
-        self.root.iconbitmap('res/icon.ico')
+        self.root.iconbitmap(resource_path(os.path.join('res', 'icon.ico')))
         self.root.resizable(0, 0)
         
         font = tkfont.Font(self.root, size=18, weight=tkfont.BOLD)

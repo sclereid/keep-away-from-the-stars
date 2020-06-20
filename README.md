@@ -14,7 +14,8 @@ Recent tests are stable.
 
 ***--- REMINDER***
 
-To pack, run
+To pack (on windows), run
 ```
-pyinstaller window.py --onefile -w --icon res/icon.ico
+pyinstaller window.py --onefile -w --icon res/icon.ico --add-data 'res/icon.ico;res/icon.ico'
 ```
+(the `--add-data` part doesn't necessarily save the icon, but at least main features survive the process)
